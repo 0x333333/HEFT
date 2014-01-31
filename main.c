@@ -11,6 +11,7 @@
 int no_tasks,no_machines;
 double **computation_costs,**data_transfer_rate,**data,*tasks_upper_rank;
 int *sorted_tasks;
+
 struct TaskProcessor
 {
     int processor;
@@ -22,7 +23,7 @@ struct TaskProcessor *schedule;
 /*******************************************************
 	FUNCTION FOR DETERMINATION OF UPPER RANK
 ********************************************************/
-//CALCULATE AVG COMMUNCATION COST AND GIVE FEED TO SORTED TASK ARRAY
+// Calculate average communication cost and give feed to sorted task array
 void insertinto(int task,double rank)
 {
     static int pos;
@@ -35,6 +36,8 @@ void insertinto(int task,double rank)
     sorted_tasks[i+1]=task;
     pos++;
 }
+
+// Calculate the average cost of communication between source and destination
 double avg_communicationcost(int source,int destination)
 {
     int i,j;
@@ -49,16 +52,20 @@ double avg_communicationcost(int source,int destination)
     return avg;
 }
 
+// Calculate the upper rank
 double calculate_upper_rank(int task)
 {
     int j;
     double avg_communication_cost,successor,avg=0.0,max=0,rank_successor;
+
     for(j=0; j<no_machines; j++)
         avg+=computation_costs[task][j];
     avg/=no_machines;
+
     for(j=0; j<no_tasks; j++)
     {
-        if(data[task][j]!=-1)             //check if a successor
+        // Check if node(j) is a successor of node(task)
+        if(data[task][j]!=-1)
         {
             avg_communication_cost=avg_communicationcost(task,j);
             if(tasks_upper_rank[j]==-1)
@@ -68,7 +75,9 @@ double calculate_upper_rank(int task)
             }
             else
                 rank_successor= tasks_upper_rank[j];
+
             successor=avg_communication_cost+rank_successor;
+
             if(max<successor)
                 max=successor;
         }
@@ -129,6 +138,8 @@ void findfreeslots(int processor,double **machineFreeTime,int *noslots)
     insertslots(machineFreeTime,*noslots,highest_AFT,99999.0);
     (*noslots)++;
 }
+
+// Ckeck if it is an entry task
 int isEntryTask(int task)
 {
     int i;
@@ -139,6 +150,8 @@ int isEntryTask(int task)
     }
     return 1;
 }
+
+// Find EST
 double find_EST(int task,int processor)
 {
     int i;
@@ -147,17 +160,22 @@ double find_EST(int task,int processor)
     {
         if(data[i][task]!=-1)
         {
+            // If they use the same processor, the cost will be 0
             if(data_transfer_rate[schedule[i].processor][processor]==0)
                 comm_cost=0;
+            // Otherwise
             else
                 comm_cost=data[i][task]/data_transfer_rate[schedule[i].processor][processor];
             ST=schedule[i].AFT + comm_cost;
+            // Try to find the max EST
             if(EST<ST)
                 EST=ST;
         }
     }
     return EST;
 }
+
+// Calculate the EST and EFT
 void calculate_EST_EFT(int task,int processor,struct TaskProcessor *EST_EFT)
 {
     double **machineFreeTime,EST;
@@ -198,16 +216,19 @@ void calculate_EST_EFT(int task,int processor,struct TaskProcessor *EST_EFT)
         }
     }
 }
+
 void make_schedule()
 {
     int i,j,k,t=0,processor,task;
-    double minCost=9999.99,min_EFT=9999.99;
+    double minCost=99999.99,min_EFT=99999.99;
     struct TaskProcessor *EST_EFT;
     EST_EFT=(struct TaskProcessor *)calloc(1,sizeof(struct TaskProcessor));
+
     for(i=0; i<no_tasks; i++)
     {
         min_EFT=9999.99;
         task=sorted_tasks[i];
+        // Check if it is a start task
         if(isEntryTask(task))
         {
             for(j=0; j<no_machines; j++)
@@ -227,7 +248,7 @@ void make_schedule()
             for(j=0; j<no_machines; j++)
             {
                 calculate_EST_EFT(task,j,EST_EFT);
-                printf("%lf %lf %d\n",EST_EFT->AST,EST_EFT->AFT,EST_EFT->processor);
+                printf("%lf %lf %d",EST_EFT->AST,EST_EFT->AFT,EST_EFT->processor);
                 if(min_EFT>(EST_EFT->AFT))
                 {
                     schedule[task]=*EST_EFT;
@@ -235,9 +256,10 @@ void make_schedule()
                 }
             }
         }
-        /// by alok
-        printf("Task scheduled %d\n",task);
+
+        printf("\nTask scheduled %d\n",task);
         printf("%d %lf %lf\n",schedule[task].processor,schedule[task].AST,schedule[task].AFT);
+        printf("------\n");
     }
 }
 
